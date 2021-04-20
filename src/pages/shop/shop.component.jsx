@@ -1,65 +1,110 @@
-import React, {useEffect} from 'react'
+import React, { useEffect } from 'react'
 import { Route } from 'react-router-dom'
-
 import { connect } from 'react-redux'
 
-// import SHOP_DATA from './shop.data'
-import { firestore, convertCollectionSnapShotToMap } from '../../firebase/firebase.util'
-// import CollectionPreview from '../../components/collection-preview/collection-preview.component'
-// import CollectionOverview from '../../components/collection-overview/collection-overview.component'
-import { fetchCollectionsStartAsync, updateCollection } from '../../redux/shop/shop.actions'
+// import SHOP_DATA from './shop.data.js'
+import {
+  firestore,
+  convertCollectionSnapShotToMap,
+} from '../../firebase/firebase.util'
+
+import {
+  fetchCollectionsStart,
+  fetchCollectionsSuccess,
+  fetchCollectionsFailure,
+  updateCollection,
+} from '../../redux/shop/shop.actions'
 
 import CollectionOverviewContainer from '../../components/collection-overview/collection-overview.container'
 import CollectionPageContainer from '../collection/collection-page.container'
 
-const ShopPage = ({fetchCollectionsStartAsyncProps, updateCollectionProps, match}) => {
-
-    // const [collections, setCollections] = useState([])
-
-    useEffect(() => {
-        // setCollections(SHOP_DATA)
-        fetchCollectionsStartAsyncProps()
-
-        let unsubscribeFromSnapShot = null
-
-        const collectionRef = firestore.collection('collections')
-
-        unsubscribeFromSnapShot = collectionRef.onSnapshot(async (snapShot) => {
-            const collectionsMap = convertCollectionSnapShotToMap(snapShot)
-            updateCollectionProps(collectionsMap)
-        })
-
-        return () => {
-            unsubscribeFromSnapShot()
-        }
-    }, [fetchCollectionsStartAsyncProps, updateCollectionProps])
-
-    return (
-        <div className="shop-page">
-            
-            {/* {
-                collections && collections.map(({ id, ...otherCollectionProps }) => (
-                    <CollectionPreview key={id} {...otherCollectionProps} />
-                ))
-            } */}
-
-            {/* <CollectionOverviewContainer /> */}
-
-            <Route exact path={`${match.path}`} component={CollectionOverviewContainer} />
-            <Route exact path={`${match.path}/:collectionId`} component={CollectionPageContainer} />
 
 
-        </div>
-    )
+const ShopPage = ({
+  fetchCollectionsStartProps,
+  fetchCollectionsSuccessProps,
+  updateCollectionProps,
+  fetchCollectionsFailureProps,
+  match,
+}) => {
+  useEffect(() => {
+    // fetchCollectionsStartAsyncProps() //promise-based fetching of data
+
+    let unsubscribeFromSnapShot = null
+
+    const collectionRef = firestore.collection('collections')
+
+    try {
+      unsubscribeFromSnapShot = collectionRef.onSnapshot(async (snapShot) => {
+        fetchCollectionsStartProps()
+        const collectionsMap = await convertCollectionSnapShotToMap(snapShot)
+        // updateCollectionProps(collectionsMap)
+        fetchCollectionsSuccessProps(collectionsMap)
+      })
+    } catch (error) {
+      fetchCollectionsFailureProps(error.message)
+    }
+
+    return () => {
+      unsubscribeFromSnapShot() //unsubscribe
+    }
+  }, [])
+
+  return (
+    <div className='shop-page'>
+      {/* {
+        collections && collections.map(({ id, ...otherCollectionProps }) => (
+            <CollectionPreview key={id} {...otherCollectionProps} />
+            ))
+        } */}
+
+      <Route
+        exact
+        path={`${match.path}`}
+        component={CollectionOverviewContainer}
+      />
+      <Route
+        path={`${match.path}/:collectionId`}
+        component={CollectionPageContainer}
+      />
+    </div>
+  )
 }
 
-const mapStateToProps = (state) => ({
-    collectionProps: state.shop.collections
+// class ShopPage extends React.Component {
+//   constructor(props) {
+//     super(props)
+
+//     this.state = {
+//       collections: SHOP_DATA,
+//     }
+//   }
+
+//   render() {
+//     const { collections } = this.state
+
+//     return (
+//       <div className='shop-page'>
+//         {collections &&
+//           collections.map(({ id, ...otherCollectionProps }) => (
+//             <CollectionPreview key={id} {...otherCollectionProps} />
+//           ))}
+//       </div>
+//     )
+//   }
+// }
+
+// const mapStateToProps = (state) => ({
+//   collectionsProps: state.shop.collections,
+// })
+
+
+
+const mapDispatchToProps = (dispatch) => ({
+  updateCollectionProps: (collectionsMap) =>dispatch(updateCollection(collectionsMap)),
+  fetchCollectionsStartProps: () => dispatch(fetchCollectionsStart()),
+  fetchCollectionsSuccessProps: (collectionsMap) => dispatch(fetchCollectionsSuccess(collectionsMap)),
+  fetchCollectionsFailureProps: (err) => dispatch(fetchCollectionsFailure(err)),
 })
 
-const mapDispatchToProps = dispatch => ({
-    updateCollectionProps: (collectionsMap) => dispatch(updateCollection(collectionsMap)),
-    fetchCollectionsStartAsyncProps: () => dispatch(fetchCollectionsStartAsync())
-})
-
-export default connect(mapStateToProps, mapDispatchToProps)(ShopPage)
+export default connect(null, mapDispatchToProps)(ShopPage)
