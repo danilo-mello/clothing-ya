@@ -48,7 +48,7 @@ const ShopPage = ({
     return () => {
       unsubscribeFromSnapShot() //unsubscribe
     }
-  }, [])
+  }, [fetchCollectionsFailureProps, fetchCollectionsStartProps, fetchCollectionsSuccessProps])
 
   return (
     <div className='shop-page'>
